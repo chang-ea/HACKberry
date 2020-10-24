@@ -229,7 +229,7 @@ void calibration() {
     
     servoIndex.write(outIndex); // extends index finger servo
       
-    if (onSerial) serialMonitor(); //opens serialMonitor?
+    if (onSerial) serialMonitor(); //line 237, displays all important values onto serial monitor
   }
   if (onSerial)  Serial.println("======calibration finish======");
 }
