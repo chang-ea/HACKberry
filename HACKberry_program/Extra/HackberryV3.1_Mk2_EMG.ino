@@ -7,7 +7,7 @@
 
 //Settings
 const boolean isRight = 1;//right:1, left:0
-int speed = 4;  //指の開閉速度を変更する場合はこの変数を変更する
+int speed = 4;  //speed of opening and closing arm
 
 //For right hand, find optimal values of ThumbMin, IndexMax and OtherMax first.
 //For left hand, find optimal values of ThumbMax, IndexMin and OtherMin first.
@@ -15,7 +15,7 @@ int speed = 4;  //指の開閉速度を変更する場合はこの変数を変�
 //Difference of ThumbMin and ThumbMax is 86
 //Difference of IndexMin and IndexMax is 117
 //Difference of OtherMin and OtherMax is 55
-
+//Calibration code
 const int outThumbMax = 140;//right:open, left:close
 const int outIndexMax = 140;//right:open, left:close
 const int outOtherMax = 120;//right:open, left:close
@@ -24,12 +24,15 @@ const int outThumbMin = 140-86;//right:close, left:open
 const int outIndexMin = 140-117; //right:close, left:open
 const int outOtherMin = 120-55;//right:close, left:open
 
-const int speedMax = 6;
-const int speedMin = 0;
+//These variables are not used anywhere in this code...
+const int speedMax = 6; //This might be used just to tell the user not to change int speed (line 10) up to 6 nor down to 0
+const int speedMin = 0; 
 const int speedReverse = -3;
 const int thSpeedReverse = 15;//0-100
 const int thSpeedZero = 30;//0-100
-const boolean onSerial = 0;   //Mk2 doesn't use serial monitor
+
+//bool for turning on the serial monitor, can be 1 if you want data printed on serial monitor
+const boolean onSerial = 0;
 
 //Hardware
 Servo servoIndex; //index finger
@@ -37,17 +40,17 @@ Servo servoOther; //other three fingers
 Servo servoThumb; //thumb
 int pinCalib; //start calibration
 //int pinTBD;
-int pinThumb; // open/close thumb
+int pinThumb; //open/close thumb
 int pinOther; //lock/unlock other three fingers
-int pinSensor = A1; //sensor input
-int pinSensor2 = A2;
+int pinSensor = A1;  //myoWare sensor input1
+int pinSensor2 = A2; //myoWare sensor input2
 
 //Software
-boolean isThumbOpen = 1;
-boolean isOtherLock = 0;
+boolean isThumbOpen = 1; //boolean for whether thumb is turned to outThumbMax or not
+boolean isOtherLock = 0; //boolean for whether other fingers is locked
 int swCount0, swCount1, swCount2, swCount3 = 0;
-int sensorValue = 0; // value read from the sensor
-int sensorValue2 = 0;
+int sensorValue = 0; // value read from the sensor 1
+int sensorValue2 = 0; // value read from the sensor 2
 int sensorMax = 700;
 int sensorMin = 0;
 int sensorMax2 = 700;
@@ -60,35 +63,42 @@ int outThumb, outIndex, outOther = 90;
 int outThumbOpen, outThumbClose, outIndexOpen, outIndexClose, outOtherOpen, outOtherClose;
 
 void setup() {
-  Serial.begin(9600);
-  if (isRight) {
+  Serial.begin(9600); //baud rate
+  //Initializations for right-handed arm
+  if (isRight) { 
     pinCalib =  A6;
     //pinTBD =  A7;
     pinThumb =  A0;
     pinOther =  10;
-    outThumbOpen = outThumbMax; outThumbClose = outThumbMin;
+    //refer to line 19-25
+    outThumbOpen = outThumbMax; //outThumbOpen = 140
+    outThumbClose = outThumbMin; //outThumbClose = 140-86, and so forth
     outIndexOpen = outIndexMax; outIndexClose = outIndexMin;
     outOtherOpen = outOtherMax; outOtherClose = outOtherMin;
   }
+  //Initializations for a left-handed arm
   else {
     pinCalib =  A6;
     //pinTBD =  A7;
     pinThumb =  A0;
     pinOther =  10;
-    outThumbOpen = outThumbMin; outThumbClose = outThumbMax;
+    //refer to line 19-25
+    outThumbOpen = outThumbMin; //outThumbOpen = 140-86
+    outThumbClose = outThumbMax; //outThumbClose = 140 
     outIndexOpen = outIndexMin; outIndexClose = outIndexMax;
     outOtherOpen = outOtherMin; outOtherClose = outOtherMax;
   }
-  servoIndex.attach(5);//index
-  servoOther.attach(6);//other
-  servoThumb.attach(9);//thumb
-  //pinMode(pinCalib, INPUT);//A6
+  
+  servoIndex.attach(5); //attaches servo of index finger to digital pin 5
+  servoOther.attach(6); //attaches servo of other fingers to digital pin 6
+  servoThumb.attach(9); //attaches servo of thumb to digital pin 9
+  //pinMode(pinCalib, INPUT);//A6  //commented out code
   //digitalWrite(pinCalib, HIGH);
   //pinMode(pinTBD, INPUT);//A5
   //digitalWrite(pinTBD, HIGH);
-  pinMode(pinThumb, INPUT);//A4
+  pinMode(pinThumb, INPUT);//A0 to thumb
   digitalWrite(pinThumb, HIGH);
-  pinMode(pinOther, INPUT);//A3
+  pinMode(pinOther, INPUT);//Digital 10 to other fingers
   digitalWrite(pinOther, HIGH);
 }
 
@@ -96,13 +106,15 @@ void loop() {
   //==waiting for calibration==
   if (onSerial) Serial.println("======Waiting for Calibration======");
   while (1) {
-    servoIndex.write(outIndexOpen);
-    servoOther.write(outOtherOpen);
-    servoThumb.write(outThumbOpen);
+    servoIndex.write(outIndexOpen); //Writing max value to servo
+    servoOther.write(outOtherOpen); //Writing max value to servo
+    servoThumb.write(outThumbOpen); //Writing max value to servo
+
     if (onSerial) serialMonitor();
     delay(10);
-    if (DigitalRead(pinCalib) == LOW) {
-      calibration();
+    if (DigitalRead(pinCalib) == LOW) //digitalReading an analog pin, if it's below a certain threshold then calibrate
+    {
+      calibration(); //refer to line 194
       break;
     }
   }
@@ -131,8 +143,8 @@ void loop() {
       while (digitalRead(pinOther) == LOW) delay(1);
     }
 
-    sensorValue = readSensor();
-    sensorValue2 = readSensor2();
+    sensorValue = readSensor(); //Read sensor value, refer to line 165
+    sensorValue2 = readSensor2(); //Reads sensor value, refer to line 176
 
     delay(25);
     if (sensorValue < sensorMin) sensorValue = sensorMin;
@@ -159,17 +171,17 @@ void loop() {
   }
 }
 
-//掌屈側センサの読み取り
+//掌屈側センサの読み取り Palm sensor reading
 int readSensor() {
-  int i, sval;
+  int i, sval; 
   for (i = 0; i < 10; i++) {
     sval += analogRead(pinSensor);
   }
-  sval = sval / 10;
+  sval = sval / 10; 
   return sval;
 }
 
-//背屈側センサの読み取り
+//背屈側センサの読み取り Dorsal muscle of arm
 int readSensor2() {
   int i, sval;
   for (i = 0; i < 10; i++) {
@@ -180,41 +192,44 @@ int readSensor2() {
 }
 
 void calibration() {
-  outIndex = outIndexOpen;
-  servoIndex.write(outIndexOpen);
-  servoOther.write(outOtherClose);
-  servoThumb.write(outThumbOpen);
-  position = positionMin;
-  prePosition = positionMin;
+  outIndex = outIndexOpen; // Setting current index servo value to max
+  servoIndex.write(outIndexOpen); // Writing max value to servo
+  servoOther.write(outOtherClose); // Writing max value to servo
+  servoThumb.write(outThumbOpen); // Writing max value to servo
+  position = positionMin; //position = 0
+  prePosition = positionMin; //prePosition = 0
 
   delay(200);
   if (onSerial) Serial.println("======calibration start======");
 
-  sensorMax = readSensor();
-  sensorMin = sensorMax - 50;
-  sensorMax2 = readSensor2();
-  sensorMin2 = sensorMax2 - 50;
-  unsigned long time = millis();
-  while ( millis() < time + 4000 ) {
-    sensorValue = readSensor();
+  sensorMax = readSensor(); // reading sensor 1
+  sensorMin = sensorMax - 50; // setting lower bound 1
+  sensorMax2 = readSensor2(); // reading sensor 2
+  sensorMin2 = sensorMax2 - 50; // setting lower bound 2
+  unsigned long time = millis(); // setting millis() variable
+  while ( millis() < time + 4000 ) // 4 second while loop
+    {
+    sensorValue = readSensor(); 
     sensorValue2 = readSensor2();
     delay(25);
-    if ( sensorValue < sensorMin ) sensorMin = sensorValue;
+    //calibrating max and min of sensor 1 & 2
+    if ( sensorValue < sensorMin ) sensorMin = sensorValue; 
     else if ( sensorValue > sensorMax )sensorMax = sensorValue;
     if ( sensorValue2 < sensorMin2 ) sensorMin2 = sensorValue2;
     else if ( sensorValue2 > sensorMax2 )sensorMax2 = sensorValue2;
-
-    if (sensorValue > ((sensorMax - sensorMin) / 2 + sensorMin) )position = prePosition + speed;
-    else if (sensorValue2 > ((sensorMax2 - sensorMin2) / 2 + sensorMin2) )position = prePosition - speed;
+    
+    //logic to determine how far the index finger should extend, then calls function map() below
+    if (sensorValue > ((sensorMax - sensorMin) / 2 + sensorMin) ) position = prePosition + speed; 
+    else if (sensorValue2 > ((sensorMax2 - sensorMin2) / 2 + sensorMin2) ) position = prePosition - speed;
     else position = prePosition;
-    if (position < positionMin) position = positionMin;
+    if (position < positionMin) position = positionMin; 
     if (position > positionMax) position = positionMax;
     prePosition = position;
+    outIndex = map(position, positionMin, positionMax, outIndexOpen, outIndexClose); //dependent on sensorValue and sensorValue2
     
-    outIndex = map(position, positionMin, positionMax, outIndexOpen, outIndexClose);
-    servoIndex.write(outIndex);
-
-    if (onSerial) serialMonitor();
+    servoIndex.write(outIndex); // extends index finger servo
+      
+    if (onSerial) serialMonitor(); //opens serialMonitor?
   }
   if (onSerial)  Serial.println("======calibration finish======");
 }
